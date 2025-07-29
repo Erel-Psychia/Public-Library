@@ -1,0 +1,871 @@
+//Touch screen class for converting gestures into keyboard commands
+//Key code and name translation
+#include "Keytran.nvgt"
+
+//Classes
+class fim
+{
+//Finger motion class
+//Starting coordinates, public
+float fx=-1;
+float fy=-1;
+//Ending coordinates, public
+float lx=-1;
+float ly=-1;
+//Finger identifier, public
+int id=-1;
+
+//End
+}
+
+class spt
+{
+//Screen part class
+//Is multi gesture supported, private
+private bool mg=true;
+//Gesture command dictionary, private
+private dictionary code;
+//Minimum supported coordinates, private
+private float fx=0;
+private float fy=0;
+//Maximum supported coordinates, private
+private float lx=1;
+private float ly=1;
+//Event identifier, private
+private int8 e=0;
+//Number of fingers detected, public
+uint8 f=0;
+//Number of taps detected, public
+uint8 t=0;
+
+//Check if the given coordinates are within the bounderies of this screen part
+bool cb(float x, float y)
+{
+return x>=fx&&x<=lx&&y>=fy&&y<=ly;
+}
+
+//Check if the given finger is within the bounderies of this screen part
+bool cb(fim@ f)
+{
+//If there is no finger given, do nothing
+if(@f is null)
+return false;
+//Otherwise, give a normal answer
+return cb(f.fx, f.fy)||cb(f.lx, f.ly);
+}
+
+//Execute a gesture command in the dictionary, with an option specifying if this gesture is held
+bool ec(int8 g, bool h=false)
+{
+//Obtain old event ID
+int8 oe=e;
+//Store the gesture code in a string
+string n=g;
+//If this gesture is held, modify the string accordingly
+if(h==true)
+n+="h";
+//If the gesture command does not exist, return false
+if(code.exists(n)==false)
+return false;
+//Otherwise, create keyboard command list
+int[] keys;
+//Obtain the keyboard command list from the gesture dictionary
+code.get(n, keys);
+//Obtain the length of the list
+uint8 l=keys.length();
+//Run a loop
+for(uint8 c=0; c<l; c++)
+{
+//If the command is an event and there was no event yet, store it in the event variable
+if(keys[c]<0&&e==0)
+e=keys[c];
+//Otherwise, it is a normal command and it should be executed
+else if(keys[c]>=0&&key_down(keys[c])==false)
+simulate_key_down(keys[c]);
+}
+//If the event ID has not change and it is not 0, reset it
+if(e==oe&&e!=0)
+e=0;
+//Return true
+return true;
+}
+
+//Is the screen part multi gestured
+bool gs()
+{
+return mg;
+}
+
+//Return the list of commands for a specified gesture
+int[] cmds(string n)
+{
+int[] data;
+code.get(n, data);
+return data;
+}
+
+//Convert the bounderies into a readable string
+string ast()
+{
+if(fx<=0.3&&lx<=0.3)
+return "Left side";
+if(fy>=0.7&&ly>=0.7)
+return "Top side";
+if(fx>=0.7&&lx>=0.7)
+return "Right side";
+if(fy<=0.3&&ly<=0.3)
+return "Bottom side";
+return "";
+}
+
+//Get a character from the screen part
+string gcs()
+{
+if(e==-1)
+return "a";
+if(e==-2)
+return "b";
+if(e==-3)
+return "c";
+if(e==-4)
+return "d";
+if(e==-5)
+return "e";
+if(e==-6)
+return "f";
+if(e==-7)
+return "g";
+if(e==-8)
+return "h";
+if(e==-9)
+return "i";
+if(e==-10)
+return "j";
+if(e==-11)
+return "k";
+if(e==-12)
+return "l";
+if(e==-13)
+return "m";
+if(e==-14)
+return "n";
+if(e==-15)
+return "o";
+if(e==-16)
+return "p";
+if(e==-17)
+return "q";
+if(e==-18)
+return "r";
+if(e==-19)
+return "s";
+if(e==-20)
+return "t";
+if(e==-21)
+return "u";
+if(e==-22)
+return "v";
+if(e==-23)
+return "w";
+if(e==-24)
+return "x";
+if(e==-25)
+return "y";
+if(e==-26)
+return "z";
+return "";
+}
+
+//Get the list of gestures in an alphabetical order
+string[] gest()
+{
+string[] data=code.get_keys();
+data.sort_ascending();
+return data;
+}
+
+//Add a command to the gesture dictionary
+void add(string n, int[] keys)
+{
+code.set(n, keys);
+}
+
+//Release all commands
+void res()
+{
+//List all the gestures in the dictionary
+string[] cmd=code.get_keys();
+//Obtain the amount of gestures
+uint8 l=cmd.length();
+//Run a loop
+for(uint8 c=0; c<l; c++)
+{
+//Obtain a list of keys
+int[] keys;
+//Obtain the list of commands for the current gesture
+code.get(cmd[c], keys);
+//Obtain the length of the keys
+uint8 n=keys.length();
+//Run a second loop
+for(uint8 d=0; d<n; d++)
+{
+//If the current command is not an event, release it
+if(keys[d]>=0)
+simulate_key_up(keys[d]);
+}
+}
+//Forget any recorded taps
+t=0;
+}
+
+//Configure the screen part
+void sc(float nfx, float nlx, float nfy, float nly, bool nmg)
+{
+mg=nmg;
+fx=nfx;
+lx=nlx;
+fy=nfy;
+ly=nly;
+}
+
+//End
+}
+
+class sif
+{
+//Screen interface class: Variables will be explained below
+//Screen part handle array, public
+spt@[] pars;
+//Screen interface name, private
+private string n;
+
+//Set interface name
+bool sn(string nn)
+{
+//If the name is already specified, do nothing
+if(n!="")
+return false;
+//Otherwise, specify the name and return true
+n=nn;
+return true;
+}
+
+//Get interface name
+string gn()
+{
+return n;
+}
+
+//End
+}
+
+class scn
+{
+//Screen class
+//Finger motion handle array, private
+private fim@[] fims;
+//First coordinates of the finger, private
+private float fx=-1;
+private float fy=-1;
+//Last coordinates of the finger, private
+private float lx=-1;
+private float ly=-1;
+//Swipe distance, private
+private float sd=0.05;
+//Screen orientation, private
+private int8 r=0;
+//Screen interface handle array, private
+private sif@[] ints;
+//Screen part handle array, private
+private spt@[] pars;
+//Hold timer, private
+private timer ht;
+//Touch timer, private
+private timer t;
+//Finger handle array, private
+private touch_finger[]@ taps;
+//Current number of fingers, private
+private uint8 l=0;
+//Previous number of fingers, private
+private uint8 rl=0;
+
+//Constructor, create pre-made screen interfaces
+scn()
+{
+add("Menu screen");
+part(0.0, 1.0, 0.2, 1.0);
+cmd_scroll();
+part(0.0, 1.0, 0.0, 0.2);
+cmd_scroll(true);
+}
+
+//Add a specified command to the last added screen part, with an option specifying if the gesture for it should be held
+bool cmd(int8 g, int k, bool h=false)
+{
+return cmd(g, {k}, h);
+}
+
+//Add multiple commands to the last screen part, with an option specifying if the gesture for them should be held
+bool cmd(int8 g, int[] keys, bool h=false)
+{
+//Obtain the number of screen interfaces
+uint8 n=ints.length();
+//If there are no screen interfaces, do nothing
+if(n==0)
+return false;
+//If the last screen interface is empty, do nothing
+if(@ints[n-1] is null)
+return false;
+//Otherwise, obtain the number of screen parts in the last screen interface
+uint8 p=ints[n-1].pars.length();
+//If there are no screen parts in the last screen interface, do nothing
+if(p==0)
+return false;
+//If the chosen part is empty, do nothing
+if(@ints[n-1].pars[p-1] is null)
+return false;
+//Otherwise, make a command
+string m=g;
+//If the gesture should be held, modify the command accordingly
+if(h==true)
+m+="h";
+//Finally, add this command list to the chosen part
+ints[n-1].pars[p-1].add(m, keys);
+//Return true
+return true;
+}
+
+//A command template for converting various swipes into navigational commands, with an option to use the home, end, and page keys, and an option to specify if all the commands should be added or not
+bool cmd_scroll(bool s=false, bool r=false)
+{
+if(s==true)
+{
+//Use home, end, and page keys
+cmd(-1, KEY_PAGEDOWN);
+cmd(-2, KEY_HOME);
+cmd(-3, KEY_PAGEUP);
+cmd(-4, KEY_END);
+cmd(1, KEY_SPACE);
+return true;
+}
+//Otherwise, use arrow, enter, escape, and copy keys
+cmd(-1, KEY_LEFT);
+cmd(-2, KEY_UP);
+cmd(-3, KEY_RIGHT);
+cmd(-4, KEY_DOWN);
+if(r==false)
+cmd(1, {KEY_LCTRL, KEY_C}, true);
+cmd(2, KEY_RETURN);
+if(r==false)
+cmd(2, {KEY_LCTRL, KEY_LSHIFT, KEY_C}, true);
+cmd(3, KEY_ESCAPE);
+return true;
+}
+
+//Check if the specified finger exists
+bool ife(fim@ f)
+{
+//If there is no finger given, do nothing
+if(@f is null)
+return false;
+//Obtain the number of fingers
+uint8 n=taps.length();
+//Run a loop
+for(uint8 c=0; c<n; c++)
+{
+//If the finger exists, return true
+if(f.id==taps[c].id)
+return true;
+}
+//Otherwise, return false
+return false;
+}
+
+//Add a screen part with the specified configuration to the last screen interface
+bool part(float fx=0, float lx=1, float fy=0, float ly=1, bool mg=true)
+{
+//Obtain the number of screen interfaces
+uint8 n=ints.length();
+//If there are no interfaces, do nothing
+if(n==0)
+return false;
+//If the last screen interface is empty, do nothing
+if(@ints[n-1] is null)
+return false;
+//Otherwise, make a new screen part
+spt s;
+//Specify the settings of this screen part
+s.sc(fx, lx, fy, ly, mg);
+//Then, insert it in the last screen interface
+ints[n-1].pars.insert_last(s);
+return true;
+}
+
+//Set the used screen parts based on the specified screen interface
+bool set(uint8 k)
+{
+//Obtain the number of screen interfaces
+uint8 n=ints.length();
+//If there is no screen part, or the specified interface does not exist, do nothing
+if(n==0||k>=n)
+return false;
+//If the specified screen part is empty, do nothing
+if(@ints[k] is null)
+return false;
+//Otherwise, Reset screen parts
+res();
+//Obtain the number of screen parts from the chosen screen interface
+n=ints[k].pars.length();
+//Run a loop
+for(uint8 c=0; c<n; c++)
+{
+//If the chosen part is not empty, add the chosen part into the screen parts array
+if(@ints[k].pars[c] !is null)
+pars.insert_last(ints[k].pars[c]);
+}
+//Return true
+return true;
+}
+
+//Obtain a rotated coordinate
+float rt(float x, float y, bool v=false)
+{
+float ax=0;
+float ay=0;
+if(r==-2)
+{
+//Reverse rotation
+ax=1-x;
+ay=1-y;
+}
+else if(r==-1)
+{
+//Rotate left
+ax=1-y;
+ay=x;
+}
+else if(r==1)
+{
+//Rotate right
+ax=y;
+ay=1-x;
+}
+else
+{
+//Do not rotate
+ax=x;
+ay=y;
+}
+//Return requested coordinate
+if(v==true)
+return ay;
+return ax;
+}
+
+//Provide screen orientation
+int8 ger()
+{
+return r+3;
+}
+
+//Record a detected gesture in the screen
+int8 rg()
+{
+//If all the coordinates are invalid, there is no swipe detected
+if(fx==-1||fy==-1||lx==-1||ly==-1)
+return 0;
+//Create coordinate difference variables
+float dx;
+float dy;
+//Store the differences between the first and last coordinates
+if(fx>lx)
+dx=fx-lx;
+else if(lx>fx)
+dx=lx-fx;
+if(fy>ly)
+dy=fy-ly;
+else if(ly>fy)
+dy=ly-fy;
+//Calculate the diffrences to identify the swipe's direction
+if(dy<sd&&dx>sd)
+{
+//Left
+if(lx<fx-sd)
+return -1;
+//Right
+if(lx>fx+sd)
+return -3;
+}
+if(dx<sd&&dy>sd)
+{
+//Up
+if(ly>fy+sd)
+return -2;
+//Down
+if(ly<fy-sd)
+return -4;
+}
+//The gesture is a tap
+return 1;
+}
+
+//Look for a screen part that can detect the finger coordinates
+spt@ sfp()
+{
+//Obtain the number of screen parts
+uint8 n=pars.length();
+//Run a loop
+for(uint8 c=0; c<n; c++)
+{
+//If the current screen part is empty, continue
+if(@pars[c] is null)
+continue;
+//If the current screen part can recognize all finger coordinates, return it
+if(pars[c].cb(fx, fy)&&pars[c].cb(lx, ly))
+return pars[c];
+}
+//Otherwise, return nothing
+return null;
+}
+
+//Look for a screen part that can detect the given coordinates
+spt@ sfp(float x, float y)
+{
+//Obtain the number of screen parts
+uint8 n=pars.length();
+//Run a loop
+for(uint8 c=0; c<n; c++)
+{
+//If the current screen part is empty, continue
+if(@pars[c] is null)
+continue;
+//If the current screen part can recognize the given coordinates, return it
+if(pars[c].cb(x, y))
+return pars[c];
+}
+//Otherwise, return nothing
+return null;
+}
+
+//Get the typed character on the screen
+string gcs()
+{
+//Create a variable for storing the character
+string a;
+//Obtain the number of screen parts
+uint8 n=pars.length();
+//Run a loop
+for(uint8 c=0; c<n; c++)
+{
+//If the current screen part is empty, continue
+if(@pars[c] is null)
+continue;
+//Attempt to get a character from the screen part
+a=pars[c].gcs();
+//If successful, return the character
+if(a!="")
+return a;
+}
+//Otherwise, return nothing
+return "";
+}
+
+//Convert screen rotation to words
+string rtw()
+{
+return rtw(r);
+}
+
+//Convert specified rotation to words
+string rtw(int8 a)
+{
+if(a==0)
+return "Portrait, home button below";
+if(a==1)
+return "Landscape, home button right";
+if(a==-2)
+return "Portrait, home button above";
+if(a==-1)
+return "Landscape, home button left";
+return "Unknown rotation "+a;
+}
+
+//Monitor the screen for any gestures, they will not be recognized when the hold timer is paused
+void act()
+{
+//Detect any gestures made on the screen
+int8 g=rg();
+//Detect fingers on the screen
+@taps=query_touch_device(0);
+//Obtain the number of fingers
+l=taps.length();
+//If there are fingers on the screen
+if(ht.running&&l>0)
+{
+//Restart the tap timer for accurate gesture recording
+t.restart();
+//Obtain the finger's current coordinates
+lx=rt(taps[l-1].x, 1-taps[l-1].y);
+ly=rt(taps[l-1].x, 1-taps[l-1].y, true);
+//If the current number of fingers is greater than the previous number of fingers
+if(l>rl)
+{
+//Restart the hold timer
+ht.restart();
+//If there are previously no fingers, the first finger tapped the screen
+if(rl==0)
+{
+//Store the finger's current coordinates as the first coordinates
+fx=lx;
+fy=ly;
+}
+//Look for a screen part
+spt@ p=sfp(lx, ly);
+//If one is found
+if(@p !is null)
+{
+//If the screen part does not support multi-gestures, try to execute the single tap command
+if(p.gs()==false)
+p.ec(1);
+}
+}
+//If a gesture is detected
+if(g<0)
+{
+//Restart the hold timer
+ht.restart();
+//Look for a screen part
+spt@ p=sfp();
+//If the gesture is a swipe
+if(@p !is null)
+{
+//If the screen part supports multi-gestures, try to execute a command for the swipe
+if(p.gs())
+p.ec(g);
+}
+}
+//If the fingers are held for a certain amount of time
+else if(g==1&&ht.elapsed>1500)
+{
+//Look for a screen part
+spt@ p=sfp(lx, ly);
+//If one is found
+if(@p !is null)
+{
+//If this screen part supports multiple gestures
+if(p.gs())
+{
+//Increase the number of detected taps
+p.t++;
+//Try to execute a tap and hold command on this screen part
+if(p.ec(p.t, true))
+{
+//If successful, forget any recorded taps and pause hold timer
+p.t=0;
+ht.pause();
+}
+}
+}
+}
+}
+//If the previous number of fingers is greater than the current number of fingers, a finger has been released
+if(ht.running&&rl>l)
+{
+//Reset the hold timer
+ht.restart();
+//If a tap is detected
+if(g==1)
+{
+//Look for a screen part
+spt@ p=sfp(lx, ly);
+//If one is found
+if(@p !is null)
+{
+//If the screen part supports multi-gestures, increase the number of taps recognized by this screen part
+if(p.gs())
+p.t++;
+//Otherwise, execute the lift command on this screen part
+else
+p.ec(0);
+}
+}
+}
+//If there are no more fingers on the screen
+if(l==0&&lx>-1&&ly>-1)
+{
+//If the hold timer is paused or some time have passed
+if(ht.running==false||t.elapsed>100)
+{
+//Reset the recorded coordinates for later use
+fx=-1;
+fy=-1;
+lx=-1;
+ly=-1;
+//If the hold timer is not paused
+if(ht.running)
+//Reset commands
+res(true);
+//Otherwise, restart the hold timer
+else
+ht.resume();
+}
+}
+//Update the recorded number of fingers
+rl=l;
+}
+
+//Add a screen interface with the specified name
+void add(string n)
+{
+sif s;
+s.sn(n);
+ints.insert_last(s);
+}
+
+//Reset screen parts, with an option to specify if only the commands should be reset
+void res(bool e=false)
+{
+//Obtain the number of screen parts
+uint8 n=pars.length();
+//Run a loop
+for(uint8 c=0; c<n; c++)
+{
+//If the current screen part is empty, continue
+if(@pars[c] is null)
+continue;
+//If only the commands should be reset, check if a part has recorded some taps
+if(e==true&&pars[c].t>0)
+//If a tap is found, try to execute a command that corresponds to the number of recorded taps
+pars[c].ec(pars[c].t);
+//Reset all gestures
+pars[c].res();
+//If the part should be reset, erase the current part
+if(e==false)
+@pars[c]=null;
+}
+//If the reset is true, Clear all parts
+if(e==false)
+pars.resize(0);
+}
+
+//Set screen orientation
+void ser(int8 nr)
+{
+r=nr;
+}
+
+//Return an array of friendly gesture commands from a screen interface, or an array of screen interface names if no screen interface is specified
+string[] info(uint8 i=0)
+{
+//Create data array
+string[] data;
+//Obtain the number of screen interfaces
+uint8 n=ints.length();
+//If an interface is specified
+if(i>0&&i<=n&&@ints[i-1] !is null)
+{
+//Create keytran object
+keytran k;
+//Adjust the l variable to measure the screen parts on the specified screen interface
+n=ints[i-1].pars.length();
+//Run a loop
+for(uint8 c=0; c<n; c++)
+{
+//List all the gestures in the chosen screen part}
+string[] list=ints[i-1].pars[c].gest();
+//Obtain the length of the list
+uint8 p=list.length();
+//Run a second loop
+for(uint8 d=0; d<p; d++)
+{
+//Keyboard command list
+int[] keys;
+//Combined command name
+string m;
+//Obtain the list of keyboard commands for the current gesture
+ints[i-1].pars[c].cmds(list[d]);
+//Obtain the length of the list
+uint8 r=keys.length();
+//Run a third loop
+for(uint8 e=0; e<r; e++)
+{
+//If the list has more than one command, add the word plus
+if(e>0&&e<r)
+m+=" plus ";
+//Add the friendly key name of the current command
+m+=k.namef(keys[e]);
+}
+//Then, add the entire command into the data array
+data.insert_last(ints[i-1].pars[c].ast()+" "+gst(list[d])+": "+m);
+}
+}
+//Return the array
+return data;
+}
+//Run a loop
+for(uint8 c=0; c<n; c++)
+{
+//If the chosen interface is not empty, add it's name into the array
+if(@ints[c] !is null)
+data.insert_last(ints[c].gn());
+}
+//Return the array
+return data;
+}
+
+//End
+}
+
+//Global object: Screen
+scn tap;
+
+//Get characters, both compatible with computers and mobile
+string gcs()
+{
+if(OS==OS_ANDROID)
+return tap.gcs();
+return get_characters();
+}
+
+//Convert a gesture code into a readable text
+string gst(string g)
+{
+//Is gesture held
+bool h=false;
+//If the gesture code ends with h, it is a held gesture
+if(g.ends_with("h"))
+{
+h=true;
+g.erase(g.length()-1);
+}
+//Gesture ID
+int8 c=parse_float(g);
+//Gesture name
+string n;
+//Convert gesture naturally
+if(c==0)
+n="No gesture";
+else if(c==-1)
+n="Swipe left";
+else if(c==-2)
+n="Swipe up";
+else if(c==-3)
+n="Swipe right";
+else if(c==-4)
+n="Swipe down";
+else if(c==1)
+n="Single tap";
+else if(c==2)
+n="Double tap";
+else if(c==3)
+n="Tripple tap";
+else
+n=c+" taps";
+//If the gesture is held, modify the name accordingly
+if(h==true)
+n+=" and hold";
+//Return the gesture name
+return n;
+}
+
+//End

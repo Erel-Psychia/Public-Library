@@ -1,0 +1,25 @@
+//Speech.nvgt, Keys.nvgt and Handle.nvgt, all combined plus some more functions
+#include "Speech.nvgt"
+#include "Keys.nvgt"
+#include "Handle.nvgt"
+
+//Default wait controls
+void dwc(string t="")
+{
+//Stop speech when a control key is pressed
+if(ct(true))
+stp();
+//The text is optional and when given, it can be copied to the clipboard using control plus c
+else if(ct()&&key_pressed(KEY_C)&&t!="")
+{
+spe("Text copied to clipboard");
+clipboard_set_text(t);
+}
+//Close the program when alt plus f4 is pressed
+else if(at()&&key_pressed(KEY_F4))
+exit();
+//Otherwise, execute the default wait
+dw();
+}
+
+//End

@@ -1,0 +1,67 @@
+//Keyboard command shortcut functions
+
+//Shortcut function to check if a key is held down or press
+bool down_or_pressed(int key, bool pressed=false)
+{
+if(pressed==true)
+return key_pressed(key);
+return key_down(key);
+}
+
+//Shortcut for checking if an alt key is held down or pressed
+bool at(bool pressed=false)
+{
+return down_or_pressed(KEY_LALT, pressed)||down_or_pressed(KEY_RALT, pressed);
+}
+
+//Shortcut for checking if a shift key is held down or pressed
+bool sf(bool pressed=false)
+{
+return down_or_pressed(KEY_LSHIFT, pressed)||down_or_pressed(KEY_RSHIFT, pressed);
+}
+
+//Shortcut for checking if a control key is held down or pressed
+bool ct(bool pressed=false)
+{
+return down_or_pressed(KEY_LCTRL, pressed)||down_or_pressed(KEY_RCTRL, pressed);
+}
+
+//These continue keys are commonly used to continue, and this function will check if they are pressed, with an option to include space and to specify if the keys should be held down
+bool ck(bool space=false, bool pressed=true)
+{
+if(space==true)
+return down_or_pressed(KEY_RETURN, pressed)||down_or_pressed(KEY_SPACE, pressed)||down_or_pressed(KEY_NUMPAD_ENTER, pressed);
+return down_or_pressed(KEY_RETURN, pressed)||down_or_pressed(KEY_NUMPAD_ENTER, pressed);
+}
+
+//These exit keys are commonly used to cancel, and this function will check if they are pressed, with an option to specify if the keys should be held down
+bool cl(bool back=false, bool pressed=true)
+{
+if(back==true)
+return down_or_pressed(KEY_ESCAPE, pressed)||down_or_pressed(KEY_BACK, pressed)||down_or_pressed(KEY_AC_BACK, pressed);
+return down_or_pressed(KEY_ESCAPE, pressed)||down_or_pressed(KEY_AC_BACK, pressed);
+}
+
+//Shortcut for checking if a navigation key is pressed or held down, 1 is left arrow, 2 is up arrow, 3 is right arrow, 4 is down arrow, 5 is home, 6 is end, 7 is page up, 8 is page down
+bool ak(uint8 n, bool pressed=true)
+{
+if(n==1)
+return down_or_pressed(KEY_LEFT, pressed);
+if(n==2)
+return down_or_pressed(KEY_UP, pressed);
+if(n==3)
+return down_or_pressed(KEY_RIGHT, pressed);
+if(n==4)
+return down_or_pressed(KEY_DOWN, pressed);
+if(n==5)
+return down_or_pressed(KEY_HOME, pressed);
+if(n==6)
+return down_or_pressed(KEY_END, pressed);
+if(n==7)
+return down_or_pressed(KEY_PAGEUP, pressed);
+if(n==8)
+return down_or_pressed(KEY_PAGEDOWN, pressed);
+return false;
+}
+
+//End

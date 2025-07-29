@@ -1,0 +1,34 @@
+//Display a development error
+void dev(string problem="", bool important=true, bool hide=false)
+{
+//Variable for error title
+string title;
+//If the program is asked to exit, the error is important
+if(important==true)
+title="Program error!";
+//Otherwise, the error is not very important
+else
+title="Error!";
+//If the error text is blank, say that the error is unknown
+if(problem=="")
+problem="The error is unknown";
+//Make sure that the error ends with a period
+if(problem.ends_with(".")==false)
+problem+=".";
+//If the encoded error data should be hidden, display an alert box with the error
+if(hide==true)
+alert(title, problem);
+//Otherwise, display a question dialog with the error
+else
+{
+//Ask if the encoded error data should be copied to the clipboard
+if(question(title, problem+"\nCopy the error data to the clipboard?")==1)
+//If yes is chosen, copy the error data to the clipboard
+clipboard_set_text(string_base64_encode(problem+"\n"+get_call_stack()));
+}
+//And exit when asked to
+if(important==true)
+exit();
+}
+
+//End
