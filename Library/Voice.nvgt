@@ -1,0 +1,66 @@
+//Speech related functions
+
+//Global variables and object
+bool using_screen_reader=false;
+tts_voice speaker;
+uint8 speech_volume=100;
+
+//Functions
+void say(bool toggle, bool interrupt=true, bool wait=false)
+{
+    string text=toggle;
+    say(text, interrupt, wait);
+}
+
+void say(float number, bool interrupt=true, bool wait=false)
+{
+    string text=number;
+    say(text, interrupt, wait);
+}
+
+void say(string text, bool interrupt=true, bool wait=false)
+{
+    if(text=="")
+        text="Blank";
+    if(using_screen_reader==true)
+    {
+        if(SCREEN_READER_AVAILABLE)
+        {
+            screen_reader_output(text, interrupt);
+            return;
+        }
+        else
+            using_screen_reader=false;
+    }
+    if(speaker.volume!=speech_volume)
+        speaker.volume=speech_volume;
+    if(wait==true)
+        speaker.speak_wait(text, interrupt);
+    else
+        speaker.speak(text, interrupt);
+}
+
+void cancel_say()
+{
+    if(using_screen_reader==true)
+    {
+        screen_reader_silence();
+        return;
+    }
+    speaker.stop();
+    if(speaker.speaking==true&&speaker.volume>0)
+    {
+        speaker.volume=0;
+        say("Stop");
+    }
+}
+
+void configure_speech(int16 voice=0, int8 rate=0, int8 pitch=0, int8 volume=0)
+{
+    speaker.set_voice(voice);
+    speaker.rate=rate;
+    speaker.pitch=pitch;
+    speech_volume=volume;
+}
+
+//End

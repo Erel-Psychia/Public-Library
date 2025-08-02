@@ -1,0 +1,324 @@
+//Input for creating auditory user interfaces
+
+#include "Handle.nvgt"
+#include "Keyboard.nvgt"
+#include "Voice.nvgt"
+//Unique traits of certain controls
+
+//Checkbox
+enum togglestates
+{
+    off,
+    half,
+    on
+}
+
+//Button
+enum buttontypes
+{
+    none,
+    primary,
+    secondary
+}
+
+enum events
+{
+    off,
+    half,
+    on,
+    pressed,
+    scroll_back,
+    scroll_forward,
+    scroll_edge
+}
+
+//Common traits of all controls
+interface control_contract
+{
+    void info(bool focus=false, bool delayed=false);
+    void loop(bool focus=false);
+    void reset();
+    void send_event(events data, bool broadcast=false);
+}
+
+funcdef void event_listener(control_contract@ source, events data);
+
+mixin class control_base : control_contract
+{
+    private bool real_focus=false;
+    protected control_contract@ parent;
+    event_listener@ listener;
+    string name;
+    private string role;
+
+    bool get_focused() property
+    {
+        return real_focus;
+    }
+
+    protected bool original_loop(bool focus=false)
+    {
+        real_focus=focus;
+        return !real_focus;
+    }
+
+    protected string original_info(bool focus=false, string data="")
+    {
+        string result;
+        if(focus==true)
+            result=data;
+        else
+        {
+            result=name;
+            if(role!="")
+                result+=" "+role;
+            result+=" "+data;
+        }
+        return result;
+    }
+
+    void reset()
+    {
+        real_focus=false;
+        name="";
+    }
+
+    void send_event(events data, bool broadcast=false)
+    {
+        if(@listener is null)
+            return;
+        listener(this, data);
+        if(broadcast==true&&@parent !is null)
+            parent.send_event(data, broadcast);
+    }
+
+    void setup(string new_name, string new_role)
+    {
+        if(name=="")
+            name=new_name;
+        if(role=="")
+            role=new_role;
+    }
+
+//End
+}
+
+class label : control_base
+{
+
+    void info(bool focus=false, bool delayed=false)
+    {
+        say(name, !delayed);
+    }
+
+    void loop(bool focus=false)
+    {
+        if(original_loop(focus))
+            return;
+        if(active(KEY_LEFT)||active(KEY_UP)||active(KEY_RIGHT)||active(KEY_DOWN))
+            info();
+    }
+
+//End
+}
+
+class checkbox : control_base
+{
+    togglestates value=off;
+
+    checkbox()
+    {
+        setup(name, "Check box");
+    }
+
+    void info(bool focus=false, bool delayed=false)
+    {
+        string data="Unknown";
+        if(value==on)
+        {
+            send_event(on, true);
+            data="Checked";
+        }
+        else if(value==half)
+        {
+            send_event(half, true);
+            data="Half checed";
+        }
+        else if(value==off)
+        {
+            send_event(off, true);
+            data="Not checked";
+        }
+        else
+            data="Unknown checkbox value "+value;
+        say(original_info(focus, data), !delayed);
+    }
+
+    void loop(bool focus=false)
+    {
+        if(original_loop(focus))
+            return;
+        if(active(KEY_SPACE))
+        {
+            if(value!=on)
+                value=on;
+            else
+                value=off;
+            info(true);
+        }
+    }
+
+    void reset()
+    {
+        value=off;
+    }
+
+//End
+}
+
+class button : control_base
+{
+    private buttontypes real_value=none;
+
+    button()
+    {
+        setup(name, "Button");
+    }
+
+    buttontypes get_value() property
+    {
+        return real_value;
+    }
+
+    void info(bool focus=false, bool delayed=false)
+    {
+        say(original_info(), !delayed);
+    }
+
+    void loop(bool focus=false)
+    {
+        if(focus==false)
+        {
+            if(value==primary&&proceed(true))
+                send_event(pressed);
+            else if(value==secondary&&cancel())
+                send_event(pressed);
+        }
+        else if(focus==true&&proceed(true))
+            send_event(pressed);
+    }
+
+    void reset()
+    {
+        real_value=none;
+    }
+
+    void set_value(buttontypes new_value) property
+    {
+        if(real_value==none&&new_value!=none)
+            real_value=new_value;
+    }
+
+//End
+}
+
+class tab : control_base
+{
+    private control_contract@[] controls;
+    private int cursor=0;
+    private int total_controls;
+
+    tab()
+    {
+        setup(name, "Dialog");
+    }
+
+    void add_control(control_contract@ target)
+    {
+        if(@target is null)
+            return;
+        controls.insert_last(target);
+        total_controls++;
+    }
+
+    void info(bool focus=false, bool delayed=false)
+    {
+        if(focus==false)
+            say(original_info());
+        if(total_controls>0&&cursor>=0&&cursor<total_controls&&@controls[cursor] !is null)
+            controls[cursor].info(false, delayed);
+    }
+
+    void loop(bool focus=false)
+    {
+        if(active(KEY_TAB))
+        {
+            if(shift())
+                scroll(false);
+            else
+                scroll(true);
+        }
+        for(uint8 counter=0; counter<total_controls; counter++)
+        {
+            if(@controls[counter] is null)
+                continue;
+            if(counter==cursor)
+                controls[counter].loop(true);
+            else
+                controls[counter].loop();
+        }
+    }
+
+    void reset()
+    {
+        controls.resize(0);
+        cursor=0;
+        total_controls=0;
+    }
+
+    void scroll(bool forward)
+    {
+        int old_cursor=cursor;
+        if(forward==false)
+        {
+            send_event(scroll_back, true);
+            if(cursor>0)
+                cursor--;
+            else
+            {
+                send_event(scroll_edge, true);
+                cursor=total_controls-1;
+            }
+        }
+        else if(forward==true)
+        {
+            send_event(scroll_forward, true);
+            if(cursor<total_controls-1)
+                cursor++;
+            else
+            {
+                send_event(scroll_edge, true);
+                cursor=0;
+            }
+        }
+        if(old_cursor!=cursor)
+            info(true);
+    }
+
+//End
+}
+
+class input : tab
+{
+
+    void run(bool first_time=false)
+    {
+        if(first_time==true)
+            wait(100);
+        info(false, true);
+    }
+
+//End
+}
+
+//End

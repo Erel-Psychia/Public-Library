@@ -1,0 +1,182 @@
+//Sound and music management
+
+#include "Handle.nvgt"
+#include "Keyboard.nvgt"
+
+sound@ load(string name)
+{
+    sound s;
+    s.load(name);
+    if(s.active)
+        return s;
+    return null;
+}
+
+sound@ play_mono(string name, float pitch=100, float volume=0, bool looping=false)
+{
+    return play_mono_extended(name, pitch, 0, volume, looping);
+}
+
+sound@ play_mono_extended(string name, float pitch=100, float seek=0, float volume=0, bool looping=false)
+{
+    sound@ s=load(name);
+    s.pitch=pitch;
+    s.volume=volume;
+    play(s, seek, looping);
+    return s;
+}
+
+void play(sound@ s, float seek=0, bool looping=false)
+{
+    if(seek<0)
+        s.seek(random(0, s.length));
+    else if(seek>0)
+        s.seek(seek);
+    if(looping==true)
+        s.play_looped();
+    else
+        s.play();
+}
+
+void play_wait(string name, float pitch=100, float volume=0, bool interruptable=false)
+{
+    sound@ s=play_mono(name, pitch, volume);
+    while(s.playing)
+    {
+        if(proceed(true)||cancel(true))
+        {
+            if(interruptable==true)
+                @s=unload(s);
+            else
+                fade_sound(s, volume, -100, 1000);
+            break;
+        }
+        window_loop();
+    }
+}
+
+sound@ unload(sound@ s)
+{
+    if(@s !is null)
+        s.close();
+    @s=null;
+    return null;
+}
+
+void fade_sound(sound@ s, float start, float end, float duration)
+{
+    if(@s is null)
+        return;
+    if(s.active==false)
+        return;
+    s.volume=start;
+    timer t;
+    s.slide_volume(end, duration);
+    while(t.elapsed<duration)
+    {
+        if(s.playing==false)
+            break;
+        window_loop();
+    }
+}
+
+class music
+{
+    private float real_pitch=100;
+    private float real_volume=-15;
+    private sound@ current_sound;
+    private sound@ old_sound;
+
+    float get_volume() property
+    {
+        return real_volume;
+    }
+
+    float get_volume_percent() property
+    {
+        return real_volume+100;
+    }
+
+    void fade(bool old=false)
+    {
+        if(old==true)
+            old_sound.slide_volume(-50, 1000);
+        else
+        {
+            fade_sound(current_sound, real_volume, -50, 1000);
+            @current_sound=unload(current_sound);
+        }
+    }
+
+    void loop()
+    {
+        if(@old_sound !is null&&old_sound.volume==-100)
+            @old_sound=unload(old_sound);
+    }
+
+    void play(string name, bool keep_old=false, bool random_seek=false)
+    {
+        if(@current_sound !is null)
+        {
+            if(current_sound.loaded_filename==name)
+                return;
+            if(keep_old==true)
+            {
+                @old_sound=current_sound;
+                fade(true);
+            }
+            else
+                fade();
+        }
+        if(random_seek==true)
+            @current_sound=play_mono_extended(name, real_pitch, -1, real_volume, true);
+        else
+            @current_sound=play_mono(name, real_pitch, real_volume, true);
+    }
+
+    void pause()
+    {
+        if(@old_sound !is null)
+            old_sound.pause();
+        if(@current_sound !is null)
+            current_sound.pause();
+    }
+
+    void reset()
+    {
+        @old_sound=unload(old_sound);
+        @current_sound=unload(current_sound);
+    }
+
+    void resume()
+    {
+        if(@old_sound !is null)
+            old_sound.play_looped();
+        if(@current_sound !is null)
+            current_sound.play_looped();
+    }
+
+    void set_pitch(float new_pitch) property
+    {
+        real_pitch=new_pitch;
+        if(@old_sound !is null)
+            old_sound.pitch=real_pitch;
+        if(@current_sound !is null)
+            current_sound.pitch=real_pitch;
+    }
+
+    void set_volume(float new_volume) property
+    {
+        real_volume=new_volume;
+        if(real_volume<-50)
+            real_volume=-50;
+        if(real_volume>0)
+            real_volume=0;
+        if(@current_sound !is null)
+            current_sound.slide_volume(real_volume, 100);
+    }
+
+//End
+}
+
+//End

@@ -1,0 +1,20 @@
+//Handling window loop
+
+funcdef void loop_signiture();
+
+void default_window_loop()
+{
+    wait(5);
+}
+
+loop_signiture@ window_loop_handle;
+
+void window_loop()
+{
+    if(@window_loop_handle !is null)
+        window_loop_handle();
+    else
+        default_window_loop();
+}
+
+//End

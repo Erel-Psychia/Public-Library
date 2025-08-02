@@ -1,0 +1,138 @@
+//Keytran library updater
+void main()
+{
+    show_window("Updating keytran");
+    datastream d;
+    script_dump_engine_configuration(d);
+//Part 1 of keytran
+    string text=
+        "//Key code and key name translation
+
+        class keytran
+        {
+        private dictionary keycode;
+        private dictionary keycode_friendly;
+
+//This complex constructor must be treated with care!
+        keytran()
+        {
+        ";
+//Part 2 of keytran
+    string[] data=d.str().split("\n");
+    uint l=data.length();
+    for(uint c=0; c<l; c++)
+    {
+        wait(1);
+        string[] list=data[c].split(" ");
+        uint8 n=list.length();
+        if(n>3&&list[0]=="enumval"&&list[1].starts_with("key"))
+        {
+            int key=parse_int(list[3]);
+            text+="keycode.set(\""+list[2]+"\", "+key+");\n";
+            text+="keycode.set(\""+key+"\", \""+list[2]+"\");\n";
+            string n=list[2].lower_this();
+            if(n.starts_with("key_"))
+                n.erase(0, 4);
+            else if(n.starts_with("keymod_"))
+                n.erase(0, 7);
+            if(n=="lshift")
+                n="left shift";
+            if(n=="rshift")
+                n="right shift";
+            if(n=="lctrl")
+                n="left control";
+            if(n=="rctrl")
+                n="right control";
+            if(n=="lalt")
+                n="left alt";
+            if(n=="ralt")
+                n="right alt";
+            if(n=="lgui")
+                n="left gui";
+            if(n=="rgui")
+                n="right gui";
+            if(n=="num")
+                n="numpad";
+            if(n=="caps")
+                n="caps lock";
+            if(n=="return")
+                n="enter";
+            if(n=="leftbracket")
+                n="left bracket";
+            if(n=="rightbracket")
+                n="right bracket";
+            if(n=="capslock")
+                n="caps lock";
+            if(n=="printscreen")
+                n="print screen";
+            if(n=="scrolllock")
+                n="scroll lock";
+            if(n=="pageup")
+                n="page up";
+            if(n=="pagedown")
+                n="page down";
+            if(n=="numlockclear")
+                n="num lock";
+            if(n=="volumeup")
+                n="volume up";
+            if(n=="volumedown")
+                n="volume down";
+            n=n.replace_this("_", " ");
+            text+="keycode_friendly.set(\""+n+"\", "+key+");\n";
+            text+="keycode_friendly.set(\""+key+"\", \""+n+"\");\n";
+        }
+    }
+//Part 3 of keytran
+    text+="}
+
+          ~keytran()
+          {
+          keycode.delete_all();
+          keycode_friendly.delete_all();
+      }
+
+          int code(string name)
+          {
+          int result;
+          keycode.get(name, result);
+          return result;
+      }
+
+          int codef(string name)
+          {
+          int result;
+          keycode_friendly.get(name, result);
+          return result;
+      }
+
+          string name(int key)
+          {
+          string result;
+          keycode.get(key, result);
+          return result;
+      }
+
+          string namef(int key)
+          {
+          string result;
+          keycode_friendly.get(key, result);
+          return result;
+      }
+
+//End
+      }
+
+//End
+          ";
+    file f;
+    f.open("Keytran.nvgt", "w");
+    f.write(text);
+    d.close();
+    f.close();
+    text="";
+    data.resize(0);
+    garbage_collect();
+    alert("", "Keytran library updated");
+}
+
+//End

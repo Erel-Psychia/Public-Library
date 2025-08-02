@@ -1,0 +1,121 @@
+//Keyboard management
+
+class keyboard
+{
+    bool custom_repeat;
+    private timer repeat_timer;
+    private uint16 real_repeat_speed=50;
+    private uint16 real_repeat_time=500;
+
+    keyboard()
+    {
+        if(OS==OS_ANDROID)
+            custom_repeat=true;
+        else
+            custom_repeat=false;
+    }
+
+    bool active(key_code key)
+    {
+        bool press_check=key_pressed(key);
+        if(press_check==true)
+            repeat_timer.restart();
+        bool repeat_check=false;
+        if(custom_repeat==true&&repeat_timer.elapsed>repeat_time)
+        {
+            repeat_timer.force(repeat_time-repeat_speed);
+            repeat_check=key_down(key);
+        }
+        else if(custom_repeat==false)
+            repeat_check=key_repeating(key);
+        return press_check||repeat_check;
+    }
+
+    uint16 get_repeat_speed() property
+    {
+        return real_repeat_speed;
+    }
+
+    uint16 get_repeat_time() property
+    {
+        return real_repeat_time;
+    }
+
+    void set_repeat_speed(uint16 new_repeat_speed) property
+    {
+        if(new_repeat_speed>real_repeat_time)
+            new_repeat_speed=real_repeat_time;
+        real_repeat_speed=new_repeat_speed;
+    }
+
+    void set_repeat_time(uint16 new_repeat_time) property
+    {
+        if(new_repeat_time>1000)
+            new_repeat_time=1000;
+        real_repeat_time=new_repeat_time;
+    }
+
+//End
+}
+
+//Global object
+keyboard keys;
+
+//Useful shortcut functions
+bool active(key_code key)
+{
+    return keys.active(key);
+}
+
+bool pressed_or_held(key_code key, bool down=true)
+{
+    if(down==true)
+        return key_down(key);
+    return key_pressed(key);
+}
+
+bool alt(bool down=true)
+{
+    return pressed_or_held(KEY_LALT, down)||pressed_or_held(KEY_RALT, down);
+}
+
+bool control(bool down=true)
+{
+    return pressed_or_held(KEY_LCTRL, down)||pressed_or_held(KEY_RCTRL, down);
+}
+
+bool gui(bool down=true)
+{
+    return pressed_or_held(KEY_LGUI, down)||pressed_or_held(KEY_RGUI, down);
+}
+
+bool shift(bool down=true)
+{
+    return pressed_or_held(KEY_LSHIFT, down)||pressed_or_held(KEY_RSHIFT, down);
+}
+
+bool proceed(bool space=false, bool down=false)
+{
+    if(space==true)
+        return pressed_or_held(KEY_RETURN, down)||pressed_or_held(KEY_SPACE, down)||pressed_or_held(KEY_NUMPAD_ENTER, down);
+    return pressed_or_held(KEY_RETURN, down)||pressed_or_held(KEY_NUMPAD_ENTER, down);
+}
+
+bool cancel(bool backspace=false, bool down=false)
+{
+    if(backspace==true)
+        return pressed_or_held(KEY_ESCAPE, down)||pressed_or_held(KEY_BACK, down)||pressed_or_held(KEY_AC_BACK, down);
+    return pressed_or_held(KEY_ESCAPE, down)||pressed_or_held(KEY_AC_BACK, down);
+}
+
+bool context(bool down=false)
+{
+    return pressed_or_held(KEY_APPLICATION, down)||(shift()&&pressed_or_held(KEY_F10, down));
+}
+
+bool closing()
+{
+    return alt()&&key_down(KEY_F4);
+}
+
+//End
